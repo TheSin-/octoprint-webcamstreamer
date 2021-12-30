@@ -36,9 +36,9 @@ You should see something like this.
 
 If not, [try this page](https://medium.freecodecamp.org/the-easy-way-to-set-up-docker-on-a-raspberry-pi-7d24ced073ef) for troubleshooting.
 
-Pull the `adilinden/rpi-ffmpeg` image:
+Pull the `kolisko/rpi-ffmpeg` image:
 
-    docker pull adilinden/rpi-ffmpeg:latest
+    docker pull kolisko/rpi-ffmpeg:latest
 
 Install OctoPrint-WebcamStreamer via one of these 3 methods, also in-depth explained on the official OctoPrint [Installing a plugin](https://plugins.octoprint.org/help/installation/) page.
 

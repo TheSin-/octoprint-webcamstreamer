@@ -51,10 +51,10 @@
             <span class="help-block">The fully qualified URL including hostname or IP address for the OctoPi webcam.</span>
         </div>
     </div>
-    <div class="control-group" title="Stream while printing">
+    <div class="control-group" title="Auto stream while printing">
         <div class="controls">
             <label class="checkbox">
-                <input type="checkbox" data-bind="checked: settings.plugins.webcamstreamer.auto_start"> Stream While Printing
+                <input type="checkbox" data-bind="checked: settings.plugins.webcamstreamer.auto_start"> Auth Stream While Printing
             </label>
         </div>
     </div>
@@ -85,7 +85,34 @@
     </div>
 </form>
 <form class="form-horizontal">
-    <h4>Advanced Settings</h4>
+    <h4>Docker Settings</h4>
+    <div class="control-group" title="Use docker">
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.plugins.webcamstreamer.use_docker"> Use Docker
+            </label>
+        </div>
+    </div>
+    <div data-bind="visible: settings.plugins.webcamstreamer.use_docker">
+        <h5>To use docker, manually install docker on the octoprint system and make sure the image you select had ffmpeg on it for the native architecture of that system</h5>
+        <div class="control-group">
+            <label class="control-label">{{ _('Docker Image') }}</label>
+            <div class="controls">
+                <input type="text" class="input-block-level" data-bind="value: settings.plugins.webcamstreamer.docker_image">
+                <span class="help-block">The name and tag of the Docker image to use (default: {{ plugin_webcamstreamer_fdocker_image_default | escape }}).</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label class="control-label">{{ _('Docker Container') }}</label>
+            <div class="controls">
+                <input type="text" class="input-block-level" data-bind="value: settings.plugins.webcamstreamer.docker_container">
+                <span class="help-block">The name given to the running Docker container (default: {{ plugin_webcamstreamer_docker_container_default | escape }}).</span>
+            </div>
+        </div>
+    </div>
+</form>
+<form class="form-horizontal">
+    <h4>Advanced FFMPEG Settings</h4>
     <div class="control-group">
         <label class="control-label">{{ _('Webcam Frame Rate') }}</label>
         <div class="controls">
@@ -97,20 +124,13 @@
         </div>
     </div>
     <div class="control-group">
-        <label class="control-label">{{ _('Docker Image') }}</label>
+        <label class="control-label">{{ _('FFmpeg Stream Overlay') }}</label>
         <div class="controls">
-            <input type="text" class="input-block-level" data-bind="value: settings.plugins.webcamstreamer.docker_image">
-            <span class="help-block">The name and tag of the Docker image to use (default: {{ plugin_webcamstreamer_fdocker_image_default | escape }}).</span>
+            <input type="text" class="input-block-level" data-bind="value: settings.plugins.webcamstreamer.overlay_cmd">
+            <span class="help-block">Leave blank for no overlay, this is a good example starting point otherwise:<br><br><code style="white-space: normal;">-pattern_type glob -loop 1 -r 1 -i "/tmp/overlay*.png" -filter_complex "[1:v][0:v]scale2ref=iw:-1[over][base]; [base][over]overlay=0:0"</code><br><br>/tmp/overlay.png will be mapped to the docker image</span>
         </div>
     </div>
     <div class="control-group">
-        <label class="control-label">{{ _('Docker Container') }}</label>
-        <div class="controls">
-            <input type="text" class="input-block-level" data-bind="value: settings.plugins.webcamstreamer.docker_container">
-            <span class="help-block">The name given to the running Docker container (default: {{ plugin_webcamstreamer_docker_container_default | escape }}).</span>
-        </div>
-    </div>
-        <div class="control-group">
         <label class="control-label">{{ _('FFmpeg Command') }}</label>
         <div class="controls">
             <input type="text" class="input-block-level" data-bind="value: settings.plugins.webcamstreamer.ffmpeg_cmd">
@@ -136,6 +156,10 @@
                 <tr>
                     <td>{webcam_url}</td>
                     <td>OctoPi Webcam URL</td>
+                </tr>
+                <tr>
+                    <td>{overlay_cmd}</td>
+                    <td>FFMPEG switch To Add A Stream Overlay</td>
                 </tr>
                 <tr>
                     <td>{frame_rate}</td>

@@ -12,6 +12,8 @@ from __future__ import absolute_import
 import octoprint.plugin
 from octoprint.server import user_permission
 import docker
+import shlex
+import subprocess
 
 class WebcamStreamerPlugin(octoprint.plugin.StartupPlugin,
                            octoprint.plugin.TemplatePlugin,
@@ -25,15 +27,16 @@ class WebcamStreamerPlugin(octoprint.plugin.StartupPlugin,
         self.client = None
         self.image = None
         self.container = None
+        self.ffmpeg = None
     
-        self.frame_rate_default = 5
+        self.frame_rate_default = 10
         self.ffmpeg_cmd_default = (
-            "ffmpeg -re -f mjpeg -framerate 5 -i {webcam_url} "                                                                   # Video input
+            "ffmpeg -re -f mjpeg -framerate {frame_rate} -i {webcam_url} {overlay_cmd} "                                                                   # Video input
             "-ar 44100 -ac 2 -acodec pcm_s16le -f s16le -ac 2 -i /dev/zero "                                               # Audio input
             "-acodec aac -ab 128k "                                                                                        # Audio output
-            "-vcodec h264 -pix_fmt yuv420p -framerate {frame_rate} -g {gop_size} -strict experimental -filter:v {filter} " # Video output
+            "-vcodec h264 -pix_fmt yuv420p -framerate {frame_rate} -g {gop_size} -strict experimental {filter} " # Video output
             "-f flv {stream_url}")                                                                                         # Output stream
-        self.docker_image_default = "adilinden/rpi-ffmpeg:latest"
+        self.docker_image_default = "kolisko/rpi-ffmpeg:latest"
         self.docker_container_default = "WebStreamer"
 
     ##~~ StartupPlugin
@@ -48,7 +51,8 @@ class WebcamStreamerPlugin(octoprint.plugin.StartupPlugin,
             + "|  docker_container = " + self._settings.get(["docker_container"]) + "\n"
             + "|  frame_rate = " + str(self._settings.get(["frame_rate"])) + "\n"
             + "|  ffmpeg_cmd = " + self._settings.get(["ffmpeg_cmd"]))
-        self._get_image()
+        if self._settings.get(["use_docker"]):
+            self._get_image()
         self._check_stream()
 
     ##~~ TemplatePlugin
@@ -72,12 +76,14 @@ class WebcamStreamerPlugin(octoprint.plugin.StartupPlugin,
             embed_url = "",
             stream_url = "",
             webcam_url = "",
+            overlay_cmd = "",
             streaming = False,
             auto_start = False,
-            ffmpeg_cmd = self.ffmpeg_cmd_default,
-            frame_rate = self.frame_rate_default,
+            use_docker = False,
             docker_image = self.docker_image_default,
             docker_container = self.docker_container_default,
+            ffmpeg_cmd = self.ffmpeg_cmd_default,
+            frame_rate = self.frame_rate_default,
 
             # Default values
             frame_rate_default = self.frame_rate_default,
@@ -152,17 +158,24 @@ class WebcamStreamerPlugin(octoprint.plugin.StartupPlugin,
                 self.image = None
 
     def _get_container(self):
-        self._get_client()
-        if self.client:
-            try:
-                self.container = self.client.containers.get(self._settings.get(["docker_container"]))
-            except Exception as e:
-                self.client = None
-                self.container = None
+        if self._settings.get(["use_docker"]):
+            self._get_client()
+            if self.client:
+                try:
+                    self.container = self.client.containers.get(self._settings.get(["docker_container"]))
+                except Exception as e:
+                    self.client = None
+                    self.container = None
+        else:
+            if self.ffmpeg:
+                self.container = self.ffmpeg
+            else:
+                self.container = self.ffmpeg = None
     
     def _start_stream(self):
         self._get_container()
         if not self.container:
+            filter_str = ""
             filters = []
             if self._settings.global_get(["webcam","flipH"]):
                 filters.append("hflip")
@@ -170,28 +183,36 @@ class WebcamStreamerPlugin(octoprint.plugin.StartupPlugin,
                 filters.append("vflip")
             if self._settings.global_get(["webcam","rotate90"]):
                 filters.append("transpose=cclock")
-            if len(filters) == 0:
-                filters.append("null")
+            if len(filters):
+                filter_str = "-filter:v {}".format(",".join(filters))
             gop_size = int(self._settings.get(["frame_rate"])) * 2
             # Substitute vars in ffmpeg command
-            docker_cmd = self._settings.get(["ffmpeg_cmd"]).format(
+            stream_cmd = self._settings.get(["ffmpeg_cmd"]).format(
+                overlay_cmd = self._settings.get(["overlay_cmd"]),
                 webcam_url = self._settings.get(["webcam_url"]),
                 stream_url = self._settings.get(["stream_url"]),
                 frame_rate = self._settings.get(["frame_rate"]),
                 gop_size = gop_size,
-                filter = ",".join(filters))
-            self._logger.info("Launching docker container '" + self._settings.get(["docker_container"]) + "':\n" + "|  " + docker_cmd)
+                filter = filter_str)
             try:
-                self._get_client()
-                self.container = self.client.containers.run(
-                    self._settings.get(["docker_image"]),
-                    command = docker_cmd,
-                    detach = True,
-                    privileged = False,
-                    devices = ["/dev/vchiq"],
-                    name = self._settings.get(["docker_container"]),
-                    auto_remove = True,
-					network_mode = "host")
+                if self._settings.get(["use_docker"]):
+                    self._logger.info("Launching docker container '" + self._settings.get(["docker_container"]) + "':\n" + "|  " + stream_cmd)
+                    self._get_client()
+                    self.container = self.client.containers.run(
+                        self._settings.get(["docker_image"]),
+                        command = stream_cmd,
+                        detach = True,
+                        privileged = False,
+                        devices = ["/dev/vchiq"],
+                        volumes = {"/tmp/overlay.png": {"bind": "/tmp/overlay.png", "mode": "ro"}},
+                        name = self._settings.get(["docker_container"]),
+                        auto_remove = True,
+                        network_mode = "host")
+                else:
+                    self._logger.info("Launching ffmpeg locally:\n" + "|  " + stream_cmd)
+                    cmd = shlex.split(stream_cmd, posix=True)
+                    self.ffmpeg = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE ,stdout=subprocess.PIPE)
+                    self._logger.info("Stream ffmpeg pid {}".format(self.ffmpeg.pid))
             except Exception as e:
                 self._logger.error(str(e))
                 self._plugin_manager.send_plugin_message(self._identifier, dict(error=str(e),status=True,streaming=False))
@@ -204,12 +225,23 @@ class WebcamStreamerPlugin(octoprint.plugin.StartupPlugin,
         self._get_container()
         if self.container:
             try:
-                self.container.stop()
-                self.container = None
+                if self._settings.get(["use_docker"]):
+                    self._logger.info("Stream stopping docker")
+                    self.container.stop()
+                else:
+                    self._logger.info("Stream stopping ffmpeg pid {}".format(self.ffmpeg.pid))
+                    if self.ffmpeg.poll():
+                        out, err = self.ffmpeg.communicate()
+                        if err:
+                            self._logger.error("FFMPEG Error: {}".format(err))
+                            self._plugin_manager.send_plugin_message(self._identifier, dict(error=err,status=True,streaming=False))
+                    self.ffmpeg.terminate()
             except Exception as e:
                 self._logger.error(str(e))
                 self._plugin_manager.send_plugin_message(self._identifier, dict(error=str(e),status=True,streaming=False))
             else:
+                self.ffmpeg = None
+                self.container = None
                 self._logger.info("Stream stopped successfully")
                 self._plugin_manager.send_plugin_message(self._identifier, dict(success="Stream stopped",status=True,streaming=False))
         else:

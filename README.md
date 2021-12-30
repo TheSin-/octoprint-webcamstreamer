@@ -59,7 +59,9 @@ Pull up **Webcam Streamer** in the OctoPi settings panel
 
     * Twitch: Your Twitch username is needed to construct the embed URL. With your username in hand, construct the URL like this:
 
-        https://player.twitch.tv/?channel=USERNAME
+        https://player.twitch.tv/?channel=USERNAME&parent=FDQN&autoplay=false&muted=true
+
+        NOTE: twitch has made changes to embedding, for it to work you need to use and fdqn that is externally accessible.
 
 - Enter your streaming providers ingest or stream server URL into the "Stream Server URL" field.
     * YoutTube: Your complete URL is created by appending your "Stream name/key" to your "Server URL". Both values can be found on your [Live dashboard](https://www.youtube.com/live_dashboard) page. With both values in hand, the complete "Stream Server URL" should look like this:

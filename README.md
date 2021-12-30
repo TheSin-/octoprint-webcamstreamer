@@ -112,3 +112,4 @@ Advanced option allow for modification of the [FFmpeg](https://www.ffmpeg.org/) 
 ## Todo
 
 - Reset buttons to restore each advanced value with the click of a button
+- Add template generator for dynamic/static overlay

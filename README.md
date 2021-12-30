@@ -112,4 +112,5 @@ Advanced option allow for modification of the [FFmpeg](https://www.ffmpeg.org/) 
 ## Todo
 
 - Reset buttons to restore each advanced value with the click of a button
-- Add template generator for dynamic/static overlay
+- Add way to upload static/base overlay, then copy it to `/tmp/overlay.png` on start
+- Add template generator for dynamic/static overlay, data to overlay over the static/base and update once or on interval

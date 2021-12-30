@@ -82,9 +82,9 @@ Terse setup information is also availabe via the expandable "Additional Informat
 
 Advanced option allow for modification of the [FFmpeg](https://www.ffmpeg.org/) command line for use with other streaming services or cameras. It also allows for a different [Docker](https://www.docker.com/) container to be specified if desired or needed.
 
-- "Webcam Frame Rate" default is 5 frames per second which is appropriate for the Raspberry Pi webcam.
+- "Webcam Frame Rate" default is 10 frames per second which is appropriate for the Raspberry Pi webcam.
 
-- "Docker Image" default is `adilinden/rpi-ffmpeg:latest`. This value needs to match the docker image installed in the setup steps.
+- "Docker Image" default is `kolisko/rpi-ffmpeg:latest`. This value needs to match the docker image installed in the setup steps.
 
 - "Docker Container" default is `WebStreamer`. This value is rather arbitrary but the default makes sense (to me).
 
@@ -92,7 +92,7 @@ Advanced option allow for modification of the [FFmpeg](https://www.ffmpeg.org/) 
 
     Default command line for `ffmpeg` is:
 
-        ffmpeg -re -f mjpeg -framerate 5 -i {webcam_url} -ar 44100 -ac 2 -acodec pcm_s16le -f s16le -ac 2 -i /dev/zero -acodec aac -ab 128k -vcodec h264 -pix_fmt yuv420p -framerate {frame_rate} -g {gop_size} -strict experimental -filter:v {filter} -f flv {stream_url}
+        ffmpeg -re -f mjpeg -framerate 5 -i {webcam_url} {overlay_cmd} -ar 44100 -ac 2 -acodec pcm_s16le -f s16le -ac 2 -i /dev/zero -acodec aac -ab 128k -vcodec h264 -pix_fmt yuv420p -framerate {frame_rate} -g {gop_size} -strict experimental -filter:v {filter} -f flv {stream_url}
 
     The following variable substitutions are available:
 
@@ -100,6 +100,7 @@ Advanced option allow for modification of the [FFmpeg](https://www.ffmpeg.org/) 
     | -----------------| -------------------------------------------|
     | `{stream_url}`     | Stream Server URL
     | `{webcam_url}`     | OctoPi Webcam URL
+    | `{overlay_cmd}`    | FFMPEG switch To Add A Stream Overlay
     | `{frame_rate}`     | OctoPi Webcam Frame Rate
     | `{gop_size}`       | Internal Calculated Value (frame rate * 2)
     | `{filter}`         | Internal Calculated Value   

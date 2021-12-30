@@ -127,7 +127,7 @@
         <label class="control-label">{{ _('FFmpeg Stream Overlay') }}</label>
         <div class="controls">
             <input type="text" class="input-block-level" data-bind="value: settings.plugins.webcamstreamer.overlay_cmd">
-            <span class="help-block">Leave blank for no overlay, this is a good example starting point otherwise:<br><br><code style="white-space: normal;">-pattern_type glob -loop 1 -r 1 -i "/tmp/overlay*.png" -filter_complex "[1:v][0:v]scale2ref=iw:-1[over][base]; [base][over]overlay=0:0"</code><br><br>/tmp/overlay.png will be mapped to the docker image</span>
+            <span class="help-block">Leave blank for no overlay<br><br>dynamic image overlay example:<br><code style="white-space: normal;">-pattern_type glob -loop 1 -r 1 -i "/tmp/overlay*.png" -filter_complex "[1:v][0:v]scale2ref=iw:-1[over][base]; [base][over]overlay=0:0"</code><br><br>static image overlay example:<br><code style="white-space: normal;">-i /tmp/overlay.png -filter_complex "[1:v][0:v]scale2ref=iw:-1[over][base]; [base][over]overlay=0:0"</code><br><br>/tmp/overlay.png will be mapped to the docker image</span>
         </div>
     </div>
     <div class="control-group">
